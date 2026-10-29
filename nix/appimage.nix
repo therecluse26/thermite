@@ -7,8 +7,7 @@
   makeDesktopItem,
   runCommand,
   runtimeShell,
-  # The release AppImage, for example a flake input with `flake = false` of
-  # https://github.com/therecluse26/thermite/releases/latest/download/thermite_amd64.AppImage
+  # The release AppImage. module.nix gives the one in release.json.
   appimage,
 }:
 

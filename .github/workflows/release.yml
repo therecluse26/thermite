@@ -73,7 +73,7 @@ jobs:
 
       # "Thermite_1.2.3_amd64.deb" becomes "thermite_1.2.3_amd64.deb".
       # The AppImage also goes up as "thermite_amd64.AppImage", a name without the version. So
-      # releases/latest/download/thermite_amd64.AppImage is always the newest, for the NixOS module.
+      # releases/latest/download/thermite_amd64.AppImage is always the newest.
       - name: Collect the packages
         run: |
           mkdir release
@@ -115,3 +115,12 @@ jobs:
           --target "$GITHUB_SHA"
           --title "Thermite $VERSION"
           --notes-file notes.md
+
+      # The NixOS module installs the window from the AppImage in nix/release.json. This commit
+      # points that file at the new release, so the flake's window and fan daemon always match.
+      # A commit with the workflow's token starts no workflow, so this makes no new release.
+      # The release scripts skip commits that change only nix/release.json.
+      - name: Point the NixOS module at the new release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: .github/scripts/pin-nix-release.sh

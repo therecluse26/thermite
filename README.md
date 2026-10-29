@@ -41,7 +41,8 @@ Each push to `main` publishes a GitHub release with a `.deb`, an `.rpm` and an A
 The packages are built on Ubuntu 22.04, so they also run on older distributions.
 Each package also carries the fan daemon, `thermite-fand`, as a static binary (see Fan daemon).
 The AppImage also goes up as `thermite_amd64.AppImage`, a name without the version.
-So `releases/latest/download/thermite_amd64.AppImage` is always the newest. The NixOS module uses it (see On NixOS).
+So `releases/latest/download/thermite_amd64.AppImage` is always the newest.
+After each release, the workflow commits the AppImage's URL and hash to `nix/release.json`. The NixOS module installs that AppImage (see On NixOS).
 Before the build, the release workflow runs the same checks as pull requests: the frontend build, clippy and `cargo test`.
 
 The commit messages since the last release tag decide the new version:
@@ -54,7 +55,9 @@ The commit messages since the last release tag decide the new version:
 
 - The first release uses the version in `src-tauri/tauri.conf.json`.
 - To jump to a version, set it there. When it is higher than the bumped version, it wins.
-- The pipeline does not write the version back into the repository. The release tag holds it.
+- The pipeline does not write the version back into `tauri.conf.json`. The release tag holds it.
+- After the release, the pipeline commits only `nix/release.json`, for the NixOS module.
+  Commits that change only that file make no release and are not in the release notes.
 - The release notes list the commit subjects since the last release, grouped by type.
 - A push that changes only Markdown files makes no release. Its commits go into the next release.
 - To push without a release, put `[skip ci]` in the commit message.
@@ -281,21 +284,13 @@ Add it to your system flake:
     url = "github:therecluse26/thermite";   # or "git+file:///path/to/thermite" for a local clone
     inputs.nixpkgs.follows = "nixpkgs";
   };
-  # The newest release AppImage. `file+`: one plain file, not an archive to unpack.
-  inputs.thermite-appimage = {
-    url = "file+https://github.com/therecluse26/thermite/releases/latest/download/thermite_amd64.AppImage";
-    flake = false;
-  };
 
-  outputs = { nixpkgs, thermite, thermite-appimage, ... }: {
+  outputs = { nixpkgs, thermite, ... }: {
     nixosConfigurations.my-machine = nixpkgs.lib.nixosSystem {
       modules = [
         thermite.nixosModules.default
         {
-          programs.thermite = {
-            enable = true;
-            appimage = thermite-appimage;
-          };
+          programs.thermite.enable = true;
           services.thermite-fand = {
             enable = true;
             user = "alice";                  # the user whose fan settings the daemon runs
@@ -308,16 +303,18 @@ Add it to your system flake:
 }
 ```
 
-`nix flake update thermite thermite-appimage` moves both to the newest release. Then rebuild.
+`nix flake update thermite` moves the window and the daemon to the newest release. Then rebuild.
 
 The window:
 
 - The module builds nothing for it. A `thermite` command runs the AppImage through `appimage-run`,
   which unpacks it once into `~/.cache/appimage-run`. The desktop entry and the icons come from this repository.
+- The AppImage is the release in `nix/release.json`. After each release, the release workflow commits that file
+  to `main` (`.github/scripts/pin-nix-release.sh`). So each commit of the flake gives a window and a daemon of the same release.
+  During a release build, `main` still names the previous release. The next `nix flake update thermite` gets the new one.
+- To run another AppImage, set `programs.thermite.appimage` to it.
 - The package holds an executable copy of the AppImage. Without the daemon, the window starts its fan helper as
   `pkexec $APPIMAGE --fan-helper`, and root can run that file only with `programs.appimage.binfmt = true`.
-- The release URL always gives the newest AppImage, but the lock pins one. After a garbage collection,
-  a rebuild with an old lock fails with a hash mismatch when a newer release exists. `nix flake update thermite-appimage` fixes that.
 
 The daemon:
 
@@ -398,10 +395,11 @@ The Rust code is a Cargo workspace in `src-tauri`, with two crates:
 | `src/curve-editor.ts` | Fan curve editor: drag points, exact numbers, temperature now |
 | `.github/workflows/ci.yml` | Checks for pull requests: frontend build, clippy, tests |
 | `.github/workflows/release.yml` | Builds the packages and publishes the release |
-| `.github/scripts/` | Chooses the next version; writes the release notes; builds the static fan daemon |
+| `.github/scripts/` | Chooses the next version; writes the release notes; builds the static fan daemon; points `nix/release.json` at the new release |
 | `flake.nix`, `nix/package.nix` | The fan daemon as a Nix package |
 | `nix/module.nix` | The NixOS module: `programs.thermite` and `services.thermite-fand` |
 | `nix/appimage.nix` | The window from a release AppImage, run through `appimage-run` |
+| `nix/release.json` | The release AppImage that the module installs: version, URL and hash |
 | `nix/test.nix` | NixOS VM test of the module |
 
 ## Tests

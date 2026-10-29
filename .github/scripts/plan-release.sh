@@ -8,22 +8,25 @@
 #   anything else, including plain messages          -> patch
 # The first release uses the version in src-tauri/tauri.conf.json.
 # Later, that version wins when it is higher: raise it there to jump ahead.
+# Commits that change only nix/release.json do not count: the release workflow makes one
+# after each release (pin-nix-release.sh).
 set -euo pipefail
 
 configured=$(jq -r .version src-tauri/tauri.conf.json)
 previous=$(git describe --tags --abbrev=0 --match 'v[0-9]*.[0-9]*.[0-9]*' 2>/dev/null || true)
+changes=(-- ':/' ':(top,exclude)nix/release.json')
 
 if [[ -z $previous ]]; then
   next=$configured
 else
-  if [[ -z $(git rev-list "$previous..HEAD") ]]; then
+  if [[ -z $(git rev-list "$previous..HEAD" "${changes[@]}") ]]; then
     echo "Nothing to release: no commits since $previous." >&2
     echo "release=false"
     exit 0
   fi
   IFS=. read -r major minor patch <<<"${previous#v}"
-  subjects=$(git log --no-merges --format=%s "$previous..HEAD")
-  bodies=$(git log --no-merges --format=%b "$previous..HEAD")
+  subjects=$(git log --no-merges --format=%s "$previous..HEAD" "${changes[@]}")
+  bodies=$(git log --no-merges --format=%b "$previous..HEAD" "${changes[@]}")
   if grep -qE '^[a-z]+(\([^)]*\))?!:' <<<"$subjects" || grep -qE '^BREAKING[ -]CHANGE:' <<<"$bodies"; then
     next="$((major + 1)).0.0"
   elif grep -qE '^feat(\([^)]*\))?:' <<<"$subjects"; then

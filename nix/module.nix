@@ -1,13 +1,10 @@
 # NixOS module for Thermite:
 #
-# - programs.thermite installs the window, from a release AppImage.
+# - programs.thermite installs the window, from the release AppImage in release.json.
 # - services.thermite-fand starts the fan daemon, thermite-fand, as root at boot. So one
 #   user's fan settings run without the window and without a password dialog.
 #
-#   programs.thermite = {
-#     enable = true;
-#     appimage = inputs.thermite-appimage;
-#   };
+#   programs.thermite.enable = true;
 #   services.thermite-fand = {
 #     enable = true;
 #     user = "alice";
@@ -23,6 +20,8 @@
 let
   window = config.programs.thermite;
   cfg = config.services.thermite-fand;
+  # The release workflow writes this file after each release.
+  release = lib.importJSON ./release.json;
 in
 {
   options.programs.thermite = {
@@ -30,11 +29,12 @@ in
 
     appimage = lib.mkOption {
       type = lib.types.path;
-      example = lib.literalExpression "inputs.thermite-appimage";
+      default = pkgs.fetchurl { inherit (release) url hash; };
+      defaultText = lib.literalMD "the AppImage of the release in {file}`nix/release.json`";
       description = ''
-        The release AppImage that the window runs. A flake input with `flake = false` of
-        <https://github.com/therecluse26/thermite/releases/latest/download/thermite_amd64.AppImage>
-        gets the newest release at each `nix flake update` of that input.
+        The release AppImage that the window runs. The default is the release in
+        {file}`nix/release.json`, which the release workflow writes after each release.
+        So the window and the fan daemon come from the same commit of this flake.
       '';
     };
 

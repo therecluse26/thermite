@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Writes the release notes in Markdown: the commits since the previous release, grouped by
 # Conventional Commits type when the subjects use one, then how to install each package.
+# Commits that change only nix/release.json are left out (see pin-nix-release.sh).
 # Usage: changelog.sh <previous tag, or "" for the first release> <new tag>
 # Needs GITHUB_REPOSITORY (owner/repo) for the links; GitHub Actions sets it.
 set -euo pipefail
@@ -29,7 +30,7 @@ while IFS=$'\t' read -r sha subject; do
   else
     other+=("$line")
   fi
-done < <(git log --no-merges --format=$'%H\t%s' ${previous:+"$previous..HEAD"})
+done < <(git log --no-merges --format=$'%H\t%s' ${previous:+"$previous..HEAD"} -- ':/' ':(top,exclude)nix/release.json')
 
 section() {
   local title=$1
