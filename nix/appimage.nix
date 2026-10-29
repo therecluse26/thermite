@@ -12,6 +12,9 @@
 }:
 
 let
+  # The AppImage has libgcrypt but not libgpg-error, which libgcrypt needs. AppImages
+  # expect libgpg-error on the host, and the appimage-run environment does not have it.
+  appimage-run' = appimage-run.override { extraPkgs = pkgs: [ pkgs.libgpg-error ]; };
   icons = ../src-tauri/icons;
   desktopItem = makeDesktopItem {
     name = "thermite";
@@ -31,7 +34,7 @@ runCommand "thermite" { meta.mainProgram = "thermite"; } ''
   mkdir -p $out/bin
   cat > $out/bin/thermite <<EOF
   #!${runtimeShell}
-  exec ${lib.getExe appimage-run} $out/libexec/thermite/thermite.AppImage "\$@"
+  exec ${lib.getExe appimage-run'} $out/libexec/thermite/thermite.AppImage "\$@"
   EOF
   chmod 555 $out/bin/thermite
 
