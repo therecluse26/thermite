@@ -13,6 +13,8 @@ The top of the window shows the system thermal load, then each fan.
 A fan card shows its speed, and a ring that fills to its share of maximum speed.
 The fan icon in the ring spins faster as the fan does.
 
+![The Thermite window: the system thermal load and two fan cards at the top, then a chart per device](docs/screenshots/main-window.png)
+
 ## Run it
 
 ```sh
@@ -166,6 +168,8 @@ The curve editor shows the duty at each temperature of the sensor you choose:
 - The list under the chart takes exact numbers. "Add point" halves the widest gap.
 - A dotted line marks the sensor's temperature now, with the duty the curve gives there.
 - The red zone starts at the sensor's "Throttling likely at" temperature, where the failsafe sets full speed.
+
+![The Fan control dialog: one curve for all fans, with 4 points and the sensor's temperature now](docs/screenshots/fan-control.png)
 
 Only root can set fan speeds, so the app splits the work:
 
